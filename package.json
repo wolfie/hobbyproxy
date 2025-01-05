@@ -1,0 +1,35 @@
+{
+  "type": "module",
+  "engines": {
+    "node": "22.12.0",
+    "pnpm": "9.15.1"
+  },
+  "scripts": {
+    "start": "npx cross-env NODE_NO_WARNINGS=1 node --experimental-strip-types src/index.ts",
+    "dev": "npx cross-env NODE_NO_WARNINGS=1 node --experimental-strip-types --watch src/index.ts"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14.0",
+    "acme-client": "^5.4.0",
+    "better-sqlite3": "^11.8.1",
+    "cloudflare": "^3.5.0",
+    "dotenv": "^16.4.7",
+    "express": "5.0.1",
+    "express-http-proxy": "^2.1.1",
+    "kysely": "^0.27.5",
+    "prompts": "^2.4.2",
+    "punycode": "^2.3.1",
+    "serve-favicon": "^2.5.0",
+    "zod": "3.24.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.0",
+    "@types/express-http-proxy": "^1.6.6",
+    "@types/node": "^22.10.5",
+    "@types/prompts": "^2.4.9",
+    "@types/serve-favicon": "^2.5.7",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.1+sha512.1acb565e6193efbebda772702950469150cf12bcc764262e7587e71d19dc98a423dff9536e57ea44c49bdf790ff694e83c27be5faa23d67e0c033b583be4bfcf"
+}

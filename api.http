@@ -1,0 +1,13 @@
+@host = localhost:8080
+
+POST http://{{host}}/
+Content-Type: application/json
+
+{
+  "hostname": "subdomain.yourdomain.examle",
+  "target": "https://example.com"
+}
+
+###
+
+GET https://{{host}}/

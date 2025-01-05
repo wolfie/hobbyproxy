@@ -1,0 +1,6 @@
+node_modules
+local.sqlite
+local.sqlite.*.bak
+acme
+.env
+config.json
