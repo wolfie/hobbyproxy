@@ -22,7 +22,9 @@ You can access the configurations of the server with the LAN IP. Any other addre
   - If `target` is omitted, the target will be `http://ip` where `ip` is the IP of the sender machine.
   - The target service should frequently (e.g. daily or hourly) re-send the `POST` request to Hobbyproxy to keep the IP up-to-date and as a signal that the service is still alive.
 
-## Features
+## Other Features
+
+All incoming traffic that gets proxied is always upgraded to HTTPS. HTTP traffic is not supported. The internal traffic can freely be HTTP or HTTPS.
 
 Hobbyproxy is trying to clean up unused routes - certificates are renewed for as long as the route is being visited and the target service keeps sending `POST` requests as a keepalive mechanism. Once a route is detected as stale:
 
