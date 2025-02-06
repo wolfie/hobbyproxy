@@ -213,16 +213,13 @@ class CertificatesManager {
       fs.readFile(paths.cert),
     ]);
 
-    let exists = true;
     if (key.status === "rejected") {
-      exists = false;
       if (!isEnoent(key.reason)) {
         await this.#logger.error(`Failed reading ${paths.key}`, key.reason);
         throw key.reason;
       }
     }
     if (cert.status === "rejected") {
-      exists = false;
       if (!isEnoent(cert.reason)) {
         await this.#logger.error(`Failed reading ${paths.cert}`, cert.reason);
         throw cert.reason;
