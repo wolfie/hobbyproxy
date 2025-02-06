@@ -1,6 +1,6 @@
 # Server
 
-- POST endpoint to remove routings (and thus certificates)
+- Rethink the staleness logic. We don't want to remove a route just because it's not heavily used.
 
 ## Post-release-prio
 

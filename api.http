@@ -11,3 +11,12 @@ Content-Type: application/json
 ###
 
 GET http://{{host}}/
+
+###
+
+DELETE http://{{host}}/
+Content-Type: application/json
+
+{
+  "hostname": "subdomain.yourdomain.examle"
+}

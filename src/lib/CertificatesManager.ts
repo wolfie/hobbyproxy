@@ -326,6 +326,8 @@ class CertificatesManager {
     ]);
     const failure = results.find((r) => r.status === "rejected");
     if (failure) throw failure.reason;
+    this.#logger.log(`Deleteing database entry for ${hostname} certificate`);
+    this.#db.certificates.delete(hostname);
     delete this.#secureContexts[hostname];
   }
 

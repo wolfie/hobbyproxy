@@ -19,8 +19,11 @@ You can access the configurations of the server with the LAN IP. Any other addre
 
 - `GET /` to get basic status of the server in JSON format
 - `POST /` with a JSON body of format `{"hostname": "yourservice.yourdomain.com", "target": "http://192.168.1.1"}`.
+  - This will create a new reverse proxy route and create a DNS entry. The next time the domain is visited, a certificate will be applied and installed automatically.
   - If `target` is omitted, the target will be `http://ip` where `ip` is the IP of the sender machine.
   - The target service should frequently (e.g. daily or hourly) re-send the `POST` request to Hobbyproxy to keep the IP up-to-date and as a signal that the service is still alive.
+- `DELETE /` with a JSON body of format `{"hostname": "yourservice.yourdomain.com"}`.
+  - This will remove the route, delete the corresponding certificate files and remove the corresponding DNS entry.
 
 ## Other Features
 

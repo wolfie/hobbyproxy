@@ -111,8 +111,10 @@ class RouteManager {
   }
 
   async delete(hostname: string) {
+    this.#logger.log(`Deleting route: ${hostname}`);
     delete this.#routes[hostname];
-    await this.#db.routes.delete(hostname);
+    const result = await this.#db.routes.delete(hostname);
+    return result[0].numDeletedRows;
   }
 }
 

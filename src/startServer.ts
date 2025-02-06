@@ -13,6 +13,7 @@ import type CertificatesManager from "./lib/CertificatesManager.ts";
 import config from "./config.ts";
 import type RouteManager from "./lib/RouteManager.ts";
 import { isIP } from "net";
+import { hostname } from "os";
 
 const handleFavicon = (logger: SystemLogger<"http">): RequestHandler => {
   const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -26,11 +27,6 @@ const handleFavicon = (logger: SystemLogger<"http">): RequestHandler => {
     res.send(faviconContents);
   }) satisfies RequestHandler;
 };
-
-const NewContextBody = z.object({
-  hostname: z.string(),
-  target: z.string().url().optional(),
-});
 
 const ensureHttps = (): RequestHandler => (req, res, next) =>
   req.secure || isLanAddress(req.hostname)
@@ -118,36 +114,65 @@ const startHttpsServer = async (opts: {
     });
   });
 
+  const NewRouteBody = z.object({
+    hostname: z.string(),
+    target: z.string().url().optional(),
+  });
   app.post("/", express.json(), async (req, res) => {
-    const bodyResult = NewContextBody.safeParse(req.body);
-    if (bodyResult.success) {
-      if (!bodyResult.data.hostname.endsWith(opts.dnsManager.zoneName)) {
-        const error = `Requested hostname ${bodyResult.data.hostname} does not end with zone name ${opts.dnsManager.zoneName} - ignoring request`;
-        logger.error(error);
-        res.status(400).send({ ok: false, error });
-        return;
-      }
-
-      logger.log(
-        `Received a request for a route for ${bodyResult.data.hostname} from ${req.socket.remoteAddress}`
-      );
-
-      let target = bodyResult.data.target;
-      if (!target) {
-        const address = getAddress(req);
-        target = `http://${address}`;
-        logger.log(`No target was given, using ${target} instead`);
-      }
-
-      await Promise.all([
-        opts.dnsManager.upsertDnsEntry(bodyResult.data.hostname),
-        opts.routeManager.set(bodyResult.data.hostname, target),
-      ]);
-      res.send({ ok: true });
-    } else {
+    const bodyResult = NewRouteBody.safeParse(req.body);
+    if (!bodyResult.success) {
       res.status(400);
       res.send({ ok: false, error: bodyResult.error });
+      return;
     }
+
+    if (!bodyResult.data.hostname.endsWith(opts.dnsManager.zoneName)) {
+      const error = `Requested hostname ${bodyResult.data.hostname} does not end with zone name ${opts.dnsManager.zoneName} - ignoring request`;
+      logger.error(error);
+      res.status(400).send({ ok: false, error });
+      return;
+    }
+
+    logger.log(
+      `Received a request for a route for ${bodyResult.data.hostname} from ${req.socket.remoteAddress}`
+    );
+
+    let target = bodyResult.data.target;
+    if (!target) {
+      const address = getAddress(req);
+      target = `http://${address}`;
+      logger.log(`No target was given, using ${target} instead`);
+    }
+
+    await Promise.all([
+      opts.dnsManager.upsertDnsEntry(bodyResult.data.hostname),
+      opts.routeManager.set(bodyResult.data.hostname, target),
+    ]);
+    res.send({ ok: true });
+  });
+
+  const DeleteRouteBody = z.object({ hostname: z.string() });
+  const BIG_ZERO = BigInt(0);
+  app.delete("/", express.json(), async (req, res) => {
+    const bodyResult = DeleteRouteBody.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400);
+      res.send({ ok: false, error: bodyResult.error });
+      return;
+    }
+
+    const hostname = bodyResult.data.hostname;
+    const deletedRows = await opts.routeManager.delete(hostname);
+    if (deletedRows === BIG_ZERO) {
+      logger.log("No routes deleted");
+      res.send({ ok: true, message: "No routes deleted" });
+      return;
+    }
+    await Promise.all([
+      opts.dnsManager.delete(hostname),
+      opts.certificatesManager.delete(hostname),
+    ]);
+    res.send({ ok: true, message: `Deleted ${hostname}` });
   });
 
   app.use((req, res) => {
