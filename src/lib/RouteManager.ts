@@ -73,8 +73,6 @@ class RouteManager {
         )
           cause = "unused";
 
-        console.log({ cause, route });
-
         if (cause) {
           const reason =
             cause === "dead"
@@ -88,7 +86,7 @@ class RouteManager {
           onRouteStale(hostname);
         }
       });
-    }, 5_000);
+    }, 60_000);
   }
 
   get(hostname: string): string | undefined {
