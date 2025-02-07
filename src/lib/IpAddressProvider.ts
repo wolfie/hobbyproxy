@@ -7,15 +7,17 @@ class IpAddressProvider {
 
   static async create(logger: Logger) {
     const systemLogger = logger.forSystem("ip-address-provider");
-    const ip = await this.#getCurrentExternalIp();
+    const ip = await this.#getCurrentExternalIp(systemLogger);
     if (!ip) throw new Error("Failed to get initial IP");
 
     systemLogger.log("Got initial IP: " + ip);
     return new IpAddressProvider(ip, systemLogger);
   }
 
-  static #getCurrentExternalIp = () =>
-    fetch("https://api.ipify.org")
+  static #getCurrentExternalIp = (
+    logger: SystemLogger<"ip-address-provider">
+  ) =>
+    fetch("https://api.ipify.org", { signal: AbortSignal.timeout(5000) })
       .then((response) => {
         if (response.status === 200) return response.text();
         else return undefined;
@@ -23,6 +25,10 @@ class IpAddressProvider {
       .catch((e) => {
         if (e instanceof Error && "code" in e && e.code === "ENOTFOUND")
           return undefined;
+        if (e instanceof DOMException && e.name === "TimeoutError") {
+          logger.log(`Request to https://api.ipify.org timed out`);
+          return undefined;
+        }
         throw e;
       });
 
@@ -32,7 +38,7 @@ class IpAddressProvider {
   ) {
     this.#latestIp = initialIp;
     setInterval(async () => {
-      const ip = await IpAddressProvider.#getCurrentExternalIp();
+      const ip = await IpAddressProvider.#getCurrentExternalIp(logger);
       if (!ip) {
         logger.log("Failed to get current IP");
       } else if (ip !== this.#latestIp) {
