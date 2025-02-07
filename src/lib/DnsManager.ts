@@ -14,7 +14,7 @@ class DnsManager {
       IpAddressProvider.create(logger),
       cloudflare.zones.list().then(async (zones) => {
         const [zone, ...moreZones] = zones.result;
-        if (moreZones.length > 1)
+        if (moreZones.length > 0)
           throw new Error(
             `More than one zone found for token. This is not supported yet.\n${zones.result.map(
               (z) => ` - ${z.id}: ${z.name}`
