@@ -1,6 +1,7 @@
 import Database from "../db/Database.ts";
 import deepFreeze from "./fp/deepFreeze.ts";
 import { format } from "util";
+import map from "./fp/map.ts";
 
 type LogEntry = {
   entries: any[];
@@ -29,8 +30,8 @@ class Logger {
     this.#db = db;
     setInterval(() => db.logs.truncateLogs(), 60_000);
 
-    db.logs.getAll().then((logs) =>
-      logs.map((log) =>
+    db.logs.getAll().then(
+      map((log) =>
         this.#logs.push({
           ...log,
           entries: [log.log],

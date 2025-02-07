@@ -5,7 +5,8 @@ Content-Type: application/json
 
 {
   "hostname": "subdomain.yourdomain.examle",
-  "target": "https://example.com"
+  "target": "https://example.com",
+  "staleInDays": 356
 }
 
 ###

@@ -117,6 +117,7 @@ const startHttpsServer = async (opts: {
   const NewRouteBody = z.object({
     hostname: z.string(),
     target: z.string().url().optional(),
+    staleInDays: z.number().optional(),
   });
   app.post("/", express.json(), async (req, res) => {
     const bodyResult = NewRouteBody.safeParse(req.body);
@@ -146,7 +147,11 @@ const startHttpsServer = async (opts: {
 
     await Promise.all([
       opts.dnsManager.upsertDnsEntry(bodyResult.data.hostname),
-      opts.routeManager.set(bodyResult.data.hostname, target),
+      opts.routeManager.set(
+        bodyResult.data.hostname,
+        target,
+        bodyResult.data.staleInDays
+      ),
     ]);
     res.send({ ok: true });
   });

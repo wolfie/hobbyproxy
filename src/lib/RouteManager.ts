@@ -1,28 +1,26 @@
 import type Database from "../db/Database.ts";
+import type { Route } from "../db/schema.ts";
 import mapObject from "./fp/mapObject.ts";
 import type Logger from "./Logger.ts";
 import type { SystemLogger } from "./Logger.ts";
 
-const STALE_ROUTE = 7 * 24 * 60 * 60 * 1000; // a week
+const DAY_IN_MILLIS = 24 * 60 * 60 * 1000;
+const HEARTBEAT_TIMEOUT_MILLIS = 7 * DAY_IN_MILLIS;
 
 class RouteManager {
   static async create({
     logger,
     db,
-    onRouteExpired,
+    onRouteStale,
   }: {
     logger: Logger;
     db: Database;
-    onRouteExpired: (hostname: string) => void;
+    onRouteStale: (hostname: string) => void;
   }) {
     const systemLogger = logger.forSystem("route-manager");
     const allEntries = await db.routes.getAll();
     const routeEntries = allEntries.map(
-      (route) =>
-        [
-          route.hostname,
-          { target: route.target, lastUpdated: route.lastUpdated },
-        ] satisfies [string, any]
+      (route) => [route.hostname, route] satisfies [string, Route]
     );
 
     if (routeEntries.length === 0) {
@@ -37,7 +35,7 @@ class RouteManager {
       db,
       Object.fromEntries(routeEntries),
       systemLogger,
-      onRouteExpired
+      onRouteStale
     );
   }
 
@@ -47,9 +45,9 @@ class RouteManager {
 
   private constructor(
     db: Database,
-    routes: Record<string, { target: string; lastUpdated: number }>,
+    routes: Record<string, Route>,
     logger: SystemLogger<"route-manager">,
-    onRouteExpired: (hostname: string) => void
+    onRouteStale: (hostname: string) => void
   ) {
     this.#db = db;
     this.#routes = mapObject(routes, (target) => ({
@@ -64,18 +62,33 @@ class RouteManager {
         if (route.lastAccessedDirty) {
           this.#db.routes.updateLastAccessedTime(hostname, route.lastAccessed);
           route.lastAccessedDirty = false;
-        } else if (route.lastUpdated < Date.now() - STALE_ROUTE) {
+        }
+
+        const now = Date.now();
+        let cause: "dead" | "unused" | undefined = undefined;
+        if (route.lastUpdated < now - HEARTBEAT_TIMEOUT_MILLIS) cause = "dead";
+        if (
+          route.staleInDays !== undefined &&
+          route.lastAccessed < now - route.staleInDays * DAY_IN_MILLIS
+        )
+          cause = "unused";
+
+        console.log({ cause, route });
+
+        if (cause) {
+          const reason =
+            cause === "dead"
+              ? `Last updated: ${new Date(route.lastUpdated).toISOString()}`
+              : `Last accessed: ${new Date(route.lastAccessed).toISOString()}`;
           logger.log(
-            `Deleting stale route: ${hostname} -> ${
-              route.target
-            } (Last accessed: ${new Date(route.lastAccessed).toISOString()})`
+            `Deleting ${cause} route: ${hostname} -> ${route.target} (${reason})`
           );
           delete this.#routes[hostname];
           await this.#db.routes.delete(hostname);
-          onRouteExpired(hostname);
+          onRouteStale(hostname);
         }
       });
-    }, 60_000);
+    }, 5_000);
   }
 
   get(hostname: string): string | undefined {
@@ -98,15 +111,19 @@ class RouteManager {
     );
   }
 
-  async set(hostname: string, target: string) {
+  async set(hostname: string, target: string, staleInDays: number | undefined) {
     this.#logger.log(`Setting route: ${hostname} -> ${target}`);
+    const now = Date.now();
     this.#routes[hostname] = {
       target,
-      lastUpdated: Date.now(),
-      lastAccessed: this.#routes[hostname]?.lastAccessed ?? Date.now(),
+      lastUpdated: now,
+      lastAccessed: this.#routes[hostname]?.lastAccessed ?? now,
       lastAccessedDirty: false,
+      added: new Date(now).toISOString(),
+      hostname,
+      staleInDays,
     };
-    await this.#db.routes.set(hostname, target);
+    await this.#db.routes.set(hostname, target, staleInDays);
     return true;
   }
 

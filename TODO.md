@@ -1,8 +1,6 @@
 # Server
 
-- Rethink the staleness logic. We don't want to remove a route just because it's not heavily used.
-
-## Post-release-prio
+## Up Next
 
 - Support multiple hostnames for one target
 - Some kind of push-notification style communication for daily stats or something

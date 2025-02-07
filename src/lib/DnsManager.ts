@@ -1,13 +1,19 @@
 import Cloudflare from "cloudflare";
 import type Logger from "./Logger.ts";
-import url from "node:url";
 import IpAddressProvider from "./IpAddressProvider.ts";
 import config from "../config.ts";
 import type { Zone } from "cloudflare/resources/zones/zones.mjs";
 import type { SystemLogger } from "./Logger.ts";
+import Database from "../db/Database.ts";
+import map from "./fp/map.ts";
+
+const hostnameToDnsEntryName = (hostname: string, zoneName: string) =>
+  hostname === zoneName
+    ? "@"
+    : hostname.substring(0, hostname.length - (zoneName.length + 1));
 
 class DnsManager {
-  static async create({ logger }: { logger: Logger }) {
+  static async create({ logger, db }: { logger: Logger; db: Database }) {
     const systemLogger = logger.forSystem("dns-manager");
     const cloudflare = new Cloudflare({ apiToken: config.cloudflareApiToken });
     const [ipProvider, zone] = await Promise.all([
@@ -26,13 +32,14 @@ class DnsManager {
 
     systemLogger.log(`Using cloudflare zone id ${zone.id} for ${zone.name}`);
 
-    return new DnsManager(systemLogger, cloudflare, ipProvider, zone);
+    return new DnsManager(systemLogger, cloudflare, ipProvider, zone, db);
   }
 
   #logger;
   #cloudflare;
   #zoneId;
   #ipProvider;
+  #db;
 
   readonly zoneName;
 
@@ -40,16 +47,18 @@ class DnsManager {
     logger: SystemLogger<"dns-manager">,
     cloudflare: Cloudflare,
     ipProvider: IpAddressProvider,
-    zone: Zone
+    zone: Zone,
+    db: Database
   ) {
     this.#logger = logger;
     this.#cloudflare = cloudflare;
     this.#ipProvider = ipProvider;
     this.#zoneId = zone.id;
     this.zoneName = zone.name;
+    this.#db = db;
 
     ipProvider.onIpChange(async (newIp) => {
-      const records = await this.#getDnsRecords();
+      const records = await this.#getManagedDnsRecords();
       for (const record of records.filter((r) => r.content !== newIp)) {
         if (!record.id) {
           this.#logger.error(`No id for DNS record`, record);
@@ -64,44 +73,42 @@ class DnsManager {
           ...record,
           zone_id: this.#zoneId,
           content: newIp,
-          comment: "Updated by hobbyproxy on " + new Date().toISOString(),
+          comment: "Updated by Hobbyproxy on " + new Date().toISOString(),
         });
       }
     });
   }
 
-  async #getDnsRecords() {
+  async #getManagedDnsRecords() {
+    const entryNames = await this.#db.routes
+      .getAll()
+      .then(map((r) => r.hostname));
     const records: Cloudflare.DNS.Records.ARecord[] = [];
+
     for await (const record of this.#cloudflare.dns.records.list({
       zone_id: this.#zoneId,
       type: "A",
     })) {
-      if (record.type !== "A") continue;
+      if (!entryNames.includes(record.name) || record.type !== "A") continue;
       records.push(record);
     }
+
     return records;
   }
 
-  async upsertDnsEntry(name: string) {
-    const entryName =
-      name === this.zoneName
-        ? "@"
-        : name.substring(0, name.length - (this.zoneName.length + 1));
-
+  async upsertDnsEntry(hostname: string) {
     const entry:
       | Cloudflare.DNS.Records.RecordCreateParams
       | Cloudflare.DNS.Records.RecordUpdateParams = {
-      name: entryName,
+      name: hostnameToDnsEntryName(hostname, this.zoneName),
       content: this.#ipProvider.getLastKnownIp(),
-      comment: "Updated by hobbyproxy on " + new Date().toISOString(),
+      comment: "Updated by Hobbyproxy on " + new Date().toISOString(),
       zone_id: this.#zoneId,
       type: "A",
     };
 
-    const records = await this.#getDnsRecords();
-    const matchingRecord = records.find(
-      (r) => r.name === url.domainToASCII(name)
-    );
+    const records = await this.#getManagedDnsRecords();
+    const matchingRecord = records.find((r) => r.name === hostname);
     if (matchingRecord && matchingRecord.id) {
       if (matchingRecord.content !== entry.content) {
         const updatedEntry = await this.#cloudflare.dns.records.update(
@@ -115,8 +122,8 @@ class DnsManager {
         return false;
       }
     } else {
-      const newEntry = await this.#cloudflare.dns.records.create(entry);
-      this.#logger.log("Created new DNS record");
+      this.#logger.log("Creating new DNS record");
+      await this.#cloudflare.dns.records.create(entry);
       return true;
     }
   }

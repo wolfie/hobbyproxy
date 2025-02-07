@@ -10,7 +10,7 @@ const db = await Database.create(logger);
 logger.connectDatabase(db);
 
 const [dnsManager, certificatesManager, routeManager] = await Promise.all([
-  DnsManager.create({ logger }),
+  DnsManager.create({ logger, db }),
   CertificatesManager.create({
     db,
     logger,
@@ -22,7 +22,7 @@ const [dnsManager, certificatesManager, routeManager] = await Promise.all([
   RouteManager.create({
     logger,
     db,
-    onRouteExpired: (hostname) => {
+    onRouteStale: (hostname) => {
       dnsManager.delete(hostname);
       certificatesManager.delete(hostname);
     },

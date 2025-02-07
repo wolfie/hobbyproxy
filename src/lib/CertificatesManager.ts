@@ -168,34 +168,18 @@ class CertificatesManager {
   }
 
   async #renewExpiringCertificates() {
-    const [expiringCertificates, routes] = await Promise.all([
+    const [expiringCertificates] = await Promise.all([
       this.#db.certificates.getExpiringWithinAWeek(),
-      this.#db.routes.getAll(),
     ]);
-    const certsToRenew = expiringCertificates.filter((e) => {
-      const hostnameRoute = routes.find((r) => r.hostname === e.hostname);
-      if (!hostnameRoute) return false;
 
-      const lastAccessed = hostnameRoute.lastAccessed;
-      const aWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const shouldRenew = lastAccessed > aWeekAgo;
-      if (!shouldRenew) {
-        this.#logger.log(
-          `Route for ${e.hostname} was last accessed ${new Date(
-            lastAccessed
-          ).toISOString()}, ignoring expiring certificate.`
-        );
-      }
-      return shouldRenew;
-    });
-
-    if (certsToRenew.length === 0) return;
     this.#logger.log(
-      `Found ${certsToRenew.length} cert(s) to renew: ${certsToRenew
+      `Found ${
+        expiringCertificates.length
+      } cert(s) to renew: ${expiringCertificates
         .map((r) => r.hostname)
         .join(", ")}`
     );
-    for (const renewable of certsToRenew) {
+    for (const renewable of expiringCertificates) {
       await this.#applyForCert(renewable.hostname);
     }
   }
@@ -324,7 +308,10 @@ class CertificatesManager {
       fs.rm(key).then(() => this.#logger.log(`Removed ${key}`)),
       fs.rm(cert).then(() => this.#logger.log(`Removed ${cert}`)),
     ]);
-    const failure = results.find((r) => r.status === "rejected");
+    const failure = results
+      .filter((r) => r.status === "rejected")
+      .filter((r) => !isEnoent(r.reason))
+      .at(0);
     if (failure) throw failure.reason;
     this.#logger.log(`Deleteing database entry for ${hostname} certificate`);
     this.#db.certificates.delete(hostname);

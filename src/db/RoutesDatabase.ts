@@ -31,7 +31,7 @@ class RoutesDatabase {
 
   getAll = () => this.#db.selectFrom("routes").selectAll().execute();
 
-  set(hostname: string, target: string) {
+  set(hostname: string, target: string, staleInDays: number | undefined) {
     const now = new Date();
     return this.#db
       .insertInto("routes")
@@ -41,11 +41,13 @@ class RoutesDatabase {
         added: now.toISOString(),
         lastAccessed: now.getTime(),
         lastUpdated: now.getTime(),
+        staleInDays,
       })
       .onConflict((oc) =>
         oc.column("hostname").doUpdateSet({
           target,
           lastUpdated: now.getTime(),
+          staleInDays,
         })
       )
       .execute();

@@ -12,6 +12,7 @@ export interface RoutesTable {
   added: string;
   lastAccessed: number;
   lastUpdated: number;
+  staleInDays?: number;
 }
 
 export type Route = Selectable<RoutesTable>;
