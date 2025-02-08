@@ -172,15 +172,17 @@ class CertificatesManager {
       this.#db.certificates.getExpiringWithinAWeek(),
     ]);
 
-    this.#logger.log(
-      `Found ${
-        expiringCertificates.length
-      } cert(s) to renew: ${expiringCertificates
-        .map((r) => r.hostname)
-        .join(", ")}`
-    );
-    for (const renewable of expiringCertificates) {
-      await this.#applyForCert(renewable.hostname);
+    if (expiringCertificates.length > 0) {
+      this.#logger.log(
+        `Found ${
+          expiringCertificates.length
+        } cert(s) to renew: ${expiringCertificates
+          .map((r) => r.hostname)
+          .join(", ")}`
+      );
+      for (const renewable of expiringCertificates) {
+        await this.#applyForCert(renewable.hostname);
+      }
     }
   }
 
