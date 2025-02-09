@@ -14,8 +14,3 @@
 - Support non-web traffic
 - Support multiple DNS zones
 - Convert to Deno and provide compiled executables?
-
-# Library
-
-- Register service with Hobbyproxy
-- "Daemon" to keep updating IP
