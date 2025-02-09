@@ -33,11 +33,6 @@ const ensureHttps = (): RequestHandler => (req, res, next) =>
     ? next()
     : res.redirect("https://" + req.hostname + req.originalUrl);
 
-const getAddress = (req: express.Request) => {
-  const addr = req.socket.address();
-  return "address" in addr ? addr.address : undefined;
-};
-
 const startHttpsServer = async (opts: {
   logger: Logger;
   dnsManager: DnsManager;
@@ -140,12 +135,12 @@ const startHttpsServer = async (opts: {
 
     let target = bodyResult.data.target;
     if (!target) {
-      target = `http://${getAddress(req)}`;
+      target = `http://${req.socket.remoteAddress}`;
       logger.log(`No target was given, using ${target} instead`);
     } else {
       const portMatch = PORT_TARGET_PATTERN.exec(target);
       if (portMatch) {
-        target = `http://${getAddress(req)}:${portMatch.groups!.port}`;
+        target = `http://${req.socket.remoteAddress}:${portMatch.groups!.port}`;
         logger.log(`Port given as target, resolving to ${target}`);
       }
     }
