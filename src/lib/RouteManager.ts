@@ -71,7 +71,7 @@ class RouteManager {
         }
         if (
           route.staleInDays !== undefined &&
-          route.lastAccessed < (now - route.staleInDays) * DAY_IN_MILLIS
+          route.lastAccessed < now - route.staleInDays * DAY_IN_MILLIS
         ) {
           cause = "unused";
         }
