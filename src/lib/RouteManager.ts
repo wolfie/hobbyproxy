@@ -66,12 +66,15 @@ class RouteManager {
 
         const now = Date.now();
         let cause: "dead" | "unused" | undefined = undefined;
-        if (route.lastUpdated < now - HEARTBEAT_TIMEOUT_MILLIS) cause = "dead";
+        if (route.lastUpdated < now - HEARTBEAT_TIMEOUT_MILLIS) {
+          cause = "dead";
+        }
         if (
           route.staleInDays !== undefined &&
-          route.lastAccessed < now - route.staleInDays * DAY_IN_MILLIS
-        )
+          route.lastAccessed < (now - route.staleInDays) * DAY_IN_MILLIS
+        ) {
           cause = "unused";
+        }
 
         if (cause) {
           const reason =
