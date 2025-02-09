@@ -116,7 +116,7 @@ const startHttpsServer = async (opts: {
 
   const NewRouteBody = z.object({
     hostname: z.string(),
-    target: z.string().url().optional(),
+    target: z.string().optional(),
     staleInDays: z.number().optional(),
   });
   app.post("/", express.json(), async (req, res) => {
