@@ -1,0 +1,19 @@
+meta {
+  name: Set route
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{hostname}}/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "hostname": "service.domain.com",
+    "target": "http://192.168.0.1:8080",
+    "staleInDays": 7
+  }
+}

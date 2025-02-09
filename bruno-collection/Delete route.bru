@@ -1,0 +1,17 @@
+meta {
+  name: Delete route
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{hostname}}/
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "hostname": "service.domain.com"
+  }
+}
