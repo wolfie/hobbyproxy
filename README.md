@@ -21,6 +21,7 @@ You can access the configurations of the server with the LAN IP. Any other addre
 - `POST /` with a JSON body of format `{"hostname": "yourservice.yourdomain.com", "target": "http://192.168.1.1", "staleInDays": 7}`.
   - This will create a new reverse proxy route and create a DNS entry. The next time the domain is visited, a certificate will be applied and installed automatically.
   - If `target` is omitted, the target will be `http://ip` where `ip` is the IP of the sender machine.
+  - If `target` starts with `:` followed by numbers (e.g. `:8080`), the target will be `http://ip:8080` where `ip` is the IP of the sender machine.
   - If `staleInDays` is omitted, the route will never be considered stale.
   - The target service should frequently (e.g. daily or hourly) re-send the `POST` request to Hobbyproxy to keep the IP up-to-date and as a signal that the service is still alive.
 - `DELETE /` with a JSON body of format `{"hostname": "yourservice.yourdomain.com"}`.

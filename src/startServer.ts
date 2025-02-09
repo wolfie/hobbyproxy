@@ -12,8 +12,8 @@ import path from "path";
 import type CertificatesManager from "./lib/CertificatesManager.ts";
 import config from "./config.ts";
 import type RouteManager from "./lib/RouteManager.ts";
-import { isIP } from "net";
-import { hostname } from "os";
+
+const PORT_TARGET_PATTERN = /^:(?<port>[0-9]+)$/;
 
 const handleFavicon = (logger: SystemLogger<"http">): RequestHandler => {
   const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -140,9 +140,14 @@ const startHttpsServer = async (opts: {
 
     let target = bodyResult.data.target;
     if (!target) {
-      const address = getAddress(req);
-      target = `http://${address}`;
+      target = `http://${getAddress(req)}`;
       logger.log(`No target was given, using ${target} instead`);
+    } else {
+      const portMatch = PORT_TARGET_PATTERN.exec(target);
+      if (portMatch) {
+        target = `http://${getAddress(req)}:${portMatch.groups!.port}`;
+        logger.log(`Port given as target, resolving to ${target}`);
+      }
     }
 
     await Promise.all([
