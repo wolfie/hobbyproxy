@@ -1,5 +1,10 @@
 # Hobbyproxy
 
+## :no_entry: Deprecated
+> [!CAUTION]
+> This project is deprecated in favor of [HobbyProxy2](https://github.com/wolfie/hobbyproxy2)
+
+
 Hobbyproxy is a reverse proxy server that manages certificates through [Let's Encrypt](https://letsencrypt.org/), hooks to [Cloudflare](https://www.cloudflare.com/) to manage individual DNS entries (and keeps it synced with your dynamic IP). Hobbyproxy is optimized to work in a hobby setting against locally hosted virtual servers, and people like me who doesn't like managing cloud infrastructure.
 
 A small library [`hobbyproxy-pinger`](https://github.com/wolfie/hobbyproxy-pinger) can help your services keep itself registered with Hobbyproxy.
